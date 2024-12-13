@@ -14,7 +14,7 @@ namespace UserManagementService.Src.Controllers
         }
 
         [HttpPut("update-profile")]
-        public async Task<ActionResult<UserDto>> UpdateProfile([FromBody] EditProfileDto editProfileDto)
+        public async Task<ActionResult<UserDto>> EditProfile([FromBody] EditProfileDto editProfileDto)
         {
             var user = await _usersService.EditProfile(editProfileDto);
             return Ok(user);
