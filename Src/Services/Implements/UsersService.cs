@@ -9,15 +9,26 @@ namespace UserManagementService.Src.Services.Implements
     {
         private readonly IMapperService _mapperService;
         private readonly IUsersRepository _usersRepository;
+        private readonly IAuthService _authService;
 
-        public UsersService(IMapperService mapperService, IUsersRepository usersRepository)
+        public UsersService(IMapperService mapperService, IUsersRepository usersRepository, IAuthService authService)
         {
             _mapperService = mapperService;
             _usersRepository = usersRepository;
+            _authService = authService;
         }
         public async Task<UserDto> EditProfile(EditProfileDto editProfileDto)
         {
-            throw new NotImplementedException();
+            var userEmail = _authService.GetUserEmailInToken();
+            var user = await GetUserByEmail(userEmail);
+
+            user.Name = editProfileDto.Name;
+            user.FirstLastName = editProfileDto.FirstLastName;
+            user.SecondLastName = editProfileDto.SecondLastName;
+
+            var updatedUser = await _usersRepository.UpdateUserAsync(user);
+
+            return _mapperService.Map<User, UserDto>(updatedUser);
         }
 
         public async Task<List<UserDto>> GetAll()
@@ -28,7 +39,7 @@ namespace UserManagementService.Src.Services.Implements
 
         public async Task<UserDto> GetByEmail(string email)
         {
-            var user = await _usersRepository.GetUserByEmailAsync(email);
+            var user = await GetUserByEmail(email);
             return _mapperService.Map<User?, UserDto>(user);
         }
 
@@ -70,5 +81,11 @@ namespace UserManagementService.Src.Services.Implements
             throw new NotImplementedException();
         }
 
+        private async Task<User> GetUserByEmail(string email)
+        {
+            var user = await _usersRepository.GetUserByEmailAsync(email)
+                                        ?? throw new InvalidOperationException($"User with email: {email} not found");
+            return user;
+        }
     }
 }

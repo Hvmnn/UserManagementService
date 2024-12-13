@@ -75,9 +75,11 @@ namespace UserManagementService.Src.Repositories.Implements
             return users;
         }
 
-        public Task UpdateUserAsync(User user)
+        public async Task <User> UpdateUserAsync(User user)
         {
-            throw new NotImplementedException();
+            _context.Users.Update(user);
+            await _context.SaveChangesAsync();
+            return user;
         }
     }
 }
