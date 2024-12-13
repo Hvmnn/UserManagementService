@@ -45,18 +45,27 @@ namespace UserManagementService.Src.Services.Implements
 
         public async Task<UserDto> GetById(int id)
         {
-            var user = await _usersRepository.GetUserByIdAsync(id) ?? throw new Exception("User not found");
+            var user = await GetUserById(id);
             return _mapperService.Map<User, UserDto>(user);
         }
 
         public Task<UserDto> GetProfile()
         {
-            throw new NotImplementedException();
+            var userEmail = _authService.GetUserEmailInToken();
+            return GetByEmail(userEmail);
         }
 
-        public Task<List<UserProgressDto>> GetUserProgress()
+        public async Task<List<UserProgressDto>> GetUserProgress()
         {
-            throw new NotImplementedException();
+            var userId = await GetUserIdByToken();
+            var userProgress = await _usersRepository.GetProgressByUserAsync(userId) ?? new List <UserProgress>();
+            var mappedProgress = userProgress.Select(up => new UserProgressDto()
+            {
+                Id = up.Id,
+                SubjectCode = up.Subject.Code,
+            }).ToList();
+
+            return mappedProgress;
         }
 
         public async Task<bool> IsEnabled(string email)
@@ -86,6 +95,21 @@ namespace UserManagementService.Src.Services.Implements
             var user = await _usersRepository.GetUserByEmailAsync(email)
                                         ?? throw new InvalidOperationException($"User with email: {email} not found");
             return user;
+        }
+
+        private async Task<User> GetUserById(int id)
+        {
+            var user = await _usersRepository.GetUserByIdAsync(id)
+                                        ?? throw new InvalidOperationException($"User with id: {id} not found");
+            return user;
+        }
+
+        private async Task<int> GetUserIdByToken()
+        {
+            var userEmail = _authService.GetUserEmailInToken();
+            var user = await _usersRepository.GetUserByEmailAsync(userEmail) ??
+                          throw new InvalidOperationException("User not found");
+            return user.Id;
         }
     }
 }
