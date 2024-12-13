@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using UserManagementService.Src.Data;
+using UserManagementService.Src.Helpers;
 using UserManagementService.Src.Repositories.Implements;
 using UserManagementService.Src.Repositories.Interfaces;
 using UserManagementService.Src.Services.Implements;
@@ -7,8 +8,12 @@ using UserManagementService.Src.Services.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddAutoMapper(typeof(MappingProfile));
 builder.Services.AddDbContext<DataContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("PostgresConnection")));
+
+builder.Services.AddControllers();
 builder.Services.AddScoped<IUsersRepository, UsersRepository>();
 builder.Services.AddScoped<ISubjectsRepository, SubjectsRepository>();
 builder.Services.AddScoped<IAuthService, AuthService>();
@@ -19,6 +24,12 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
+using (var scope = app.Services.CreateScope()){
+    var services = scope.ServiceProvider;
+    var dbContext = services.GetRequiredService<DataContext>();
+
+    dbContext.Database.Migrate();
+}
 
 if (app.Environment.IsDevelopment())
 {
