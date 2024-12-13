@@ -9,7 +9,7 @@ namespace UserManagementService.Src.Data
         public DbSet<Models.User> Users { get; set; } = null!;
         public DbSet<Models.Role> Roles { get; set; } = null!;
         public DbSet<Models.Career> Careers { get; set; } = null!;
-        public DbSet<Models.UserProgress> UserProgresses { get; set; } = null!;
+        public DbSet<Models.UserProgress> UsersProgresses { get; set; } = null!;
         public DbSet<Models.Subject> Subjects { get; set; } = null!;
     }
 }
