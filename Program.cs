@@ -29,6 +29,7 @@ using (var scope = app.Services.CreateScope()){
     var dbContext = services.GetRequiredService<DataContext>();
 
     dbContext.Database.Migrate();
+    await Seeder.SeedAsync(dbContext);
 }
 
 if (app.Environment.IsDevelopment())
