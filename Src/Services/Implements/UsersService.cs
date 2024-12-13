@@ -1,4 +1,5 @@
 using UserManagementService.Src.DTOs;
+using UserManagementService.Src.Exceptions;
 using UserManagementService.Src.Models;
 using UserManagementService.Src.Repositories.Interfaces;
 using UserManagementService.Src.Services.Interfaces;
@@ -9,13 +10,15 @@ namespace UserManagementService.Src.Services.Implements
     {
         private readonly IMapperService _mapperService;
         private readonly IUsersRepository _usersRepository;
+        private readonly ISubjectsRepository _subjectsRepository;
         private readonly IAuthService _authService;
 
-        public UsersService(IMapperService mapperService, IUsersRepository usersRepository, IAuthService authService)
+        public UsersService(IMapperService mapperService, IUsersRepository usersRepository, IAuthService authService, ISubjectsRepository subjectsRepository)
         {
             _mapperService = mapperService;
             _usersRepository = usersRepository;
             _authService = authService;
+            _subjectsRepository = subjectsRepository;
         }
         public async Task<UserDto> EditProfile(EditProfileDto editProfileDto)
         {
@@ -85,22 +88,63 @@ namespace UserManagementService.Src.Services.Implements
             }
         }
 
-        public Task SetUserProgress(UpdateUserProgressDto subjects)
+        public async Task SetUserProgress(UpdateUserProgressDto subjects)
         {
-            throw new NotImplementedException();
+            var subjectsId = await MapAndValidateToSubjectId(subjects);
+            var subjectsToAdd = subjectsId.Item1;
+            var subjectsToDelete = subjectsId.Item2;
+
+            var userId = await GetUserIdByToken();
+            var userProgress = await _usersRepository.GetProgressByUserAsync(userId) ?? new List<UserProgress>();
+
+            var progressToAdd = subjectsToAdd.Select(s =>
+            {
+                var foundUserProgress = userProgress.FirstOrDefault(up => up.SubjectId == s);
+
+                if (foundUserProgress is not null)
+                    throw new DuplicateEntityException($"Subject with ID: {foundUserProgress.Subject.Code} already exists");
+
+                return new UserProgress()
+                {
+                    SubjectId = s,
+                    UserId = userId,
+                };
+            }).ToList();
+
+            var progressToRemove = subjectsToDelete.Select(s =>
+            {
+                if (userProgress.FirstOrDefault(up => up.SubjectId == s) is null)
+                    throw new EntityNotFoundException($"Subject with ID: {s} not found");
+
+                return new UserProgress()
+                {
+                    SubjectId = s,
+                    UserId = userId,
+                };
+            }).ToList();
+
+            var addResult = await _usersRepository.AddProgressAsync(progressToAdd);
+            var removeResult = await _usersRepository.DeleteProgressAsync(progressToRemove, userId);
+
+            if (!removeResult && !addResult)
+                throw new InternalErrorException("Cannot update user progress");
         }
+
+
+
+
 
         private async Task<User> GetUserByEmail(string email)
         {
             var user = await _usersRepository.GetUserByEmailAsync(email)
-                                        ?? throw new InvalidOperationException($"User with email: {email} not found");
+                                        ?? throw new EntityNotFoundException($"User with email: {email} not found");
             return user;
         }
 
         private async Task<User> GetUserById(int id)
         {
             var user = await _usersRepository.GetUserByIdAsync(id)
-                                        ?? throw new InvalidOperationException($"User with id: {id} not found");
+                                        ?? throw new EntityNotFoundException($"User with id: {id} not found");
             return user;
         }
 
@@ -108,8 +152,34 @@ namespace UserManagementService.Src.Services.Implements
         {
             var userEmail = _authService.GetUserEmailInToken();
             var user = await _usersRepository.GetUserByEmailAsync(userEmail) ??
-                          throw new InvalidOperationException("User not found");
+                          throw new EntityNotFoundException("User not found");
             return user.Id;
+        }
+
+        private async Task<Tuple<List<int>, List<int>>> MapAndValidateToSubjectId(UpdateUserProgressDto subjects)
+        {
+            var allSubjects = await _subjectsRepository.GetAllSubjectsAsync();
+            var subjectsToAdd = subjects.AddSubjects;
+            var subjectsToDelete = subjects.DeleteSubjects;
+
+            var mappedSubjectsToAdd = subjectsToAdd.Select(s =>
+            {
+                s = s.ToLower();
+                var foundSubject = allSubjects.FirstOrDefault(sub => sub.Code == s)
+                    ?? throw new EntityNotFoundException($"Subject with ID: {s} not found");
+                return foundSubject.Id;
+            }).ToList();
+
+            var mappedSubjectsToDelete = subjectsToDelete.Select(s =>
+            {
+                s = s.ToLower();
+                var foundSubject = allSubjects.FirstOrDefault(sub => sub.Code == s)
+                    ?? throw new EntityNotFoundException($"Subject with ID: {s} not found");
+                return foundSubject.Id;
+            }).ToList();
+
+            return new Tuple<List<int>, List<int>>(mappedSubjectsToAdd, mappedSubjectsToDelete);
+
         }
     }
 }
