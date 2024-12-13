@@ -66,7 +66,7 @@ namespace UserManagementService.Src.Repositories.Implements
                 .FirstOrDefaultAsync(u => u.RUT == rut);
             return user;
         }
-        public async Task<List<User>> GetAll()
+        public async Task<List<User>> GetAllAsync()
         {
             var users = await _context.Users
                 .Include(u => u.Career)
