@@ -9,6 +9,7 @@ using UserManagementService.Src.Services.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.Configure<RabbitMQOptions>(builder.Configuration.GetSection("RabbitMQ"));
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddAutoMapper(typeof(MappingProfile));
 builder.Services.AddDbContext<DataContext>(options =>
