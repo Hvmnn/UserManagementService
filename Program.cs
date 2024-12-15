@@ -1,4 +1,7 @@
+using System.Security.Claims;
+using System.Text;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using UserManagementService.Src.Data;
 using UserManagementService.Src.Helpers;
 using UserManagementService.Src.Repositories.Implements;
@@ -23,9 +26,56 @@ builder.Services.AddScoped<IMapperService, MapperService>();
 builder.Services.AddScoped<IUsersService, UsersService>();
 builder.Services.AddSingleton<RabbitMQProducer>();
 builder.Services.AddSingleton<RabbitMQConsumer>();
-builder.Services.AddGrpc();
+builder.Services.AddGrpc(options =>
+{
+    options.EnableDetailedErrors = true;
+    options.Interceptors.Add<ServerCallContextInterceptor>();
+});
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+builder.Services.AddAuthentication("Bearer")
+    .AddJwtBearer("Bearer", options =>
+    {
+        options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
+        {
+            ValidateIssuer = false,
+            ValidateAudience = false,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("ThisIsASuperSecureKey12345!@#$%67890")),
+            NameClaimType = ClaimTypes.Name,
+            RoleClaimType = ClaimTypes.Role
+        };
+
+        options.Events = new Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                if (context.Request.Headers.ContainsKey("Authorization"))
+                {
+                    var token = context.Request.Headers["Authorization"];
+                    Console.WriteLine($"Middleware JWT Token recibido: {token}");
+                    context.Token = token.ToString().Replace("Bearer ", "");
+                }
+                else
+                {
+                    Console.WriteLine("Middleware JWT: No se encontró el encabezado 'Authorization'.");
+                }
+
+                return Task.CompletedTask;
+            },
+            OnAuthenticationFailed = context =>
+            {
+                Console.WriteLine($"Middleware JWT Error: {context.Exception.Message}");
+                return Task.CompletedTask;
+            }
+        };
+    });
+builder.Services.AddAuthorization();
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
 
 var app = builder.Build();
 
@@ -45,6 +95,8 @@ if (app.Environment.IsDevelopment())
 
 app.MapGrpcService<UserServiceImpl>();
 app.MapGet("/", () => "User Management Service");
+app.UseAuthentication();
+app.UseAuthorization();
 app.UseHttpsRedirection();
 app.MapControllers();
 
