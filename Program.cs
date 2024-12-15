@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using UserManagementService.Src.Data;
 using UserManagementService.Src.Helpers;
+using UserManagementService.Src.Models;
 using UserManagementService.Src.Repositories.Implements;
 using UserManagementService.Src.Repositories.Interfaces;
 using UserManagementService.Src.Services;
@@ -24,6 +25,9 @@ builder.Services.AddScoped<ISubjectsRepository, SubjectsRepository>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IMapperService, MapperService>();
 builder.Services.AddScoped<IUsersService, UsersService>();
+builder.Services.AddScoped<ICareersRepository, CareersRepository>();
+builder.Services.AddScoped<IAccessManagementService, AccessManagementService>();
+builder.Services.AddScoped<Microsoft.AspNetCore.Identity.IPasswordHasher<User>, Microsoft.AspNetCore.Identity.PasswordHasher<User>>();
 builder.Services.AddSingleton<RabbitMQProducer>();
 builder.Services.AddSingleton<RabbitMQConsumer>();
 builder.Services.AddGrpc(options =>
@@ -53,6 +57,13 @@ builder.Services.AddAuthentication("Bearer")
         {
             OnMessageReceived = context =>
             {
+
+                var endpoint = context.HttpContext.GetEndpoint();
+                if (endpoint?.Metadata?.GetMetadata<Microsoft.AspNetCore.Authorization.AllowAnonymousAttribute>() != null)
+                {
+                    return Task.CompletedTask;
+                }
+
                 if (context.Request.Headers.ContainsKey("Authorization"))
                 {
                     var token = context.Request.Headers["Authorization"];

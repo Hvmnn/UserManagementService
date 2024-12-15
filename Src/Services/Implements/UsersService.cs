@@ -165,7 +165,7 @@ namespace UserManagementService.Src.Services.Implements
             var mappedSubjectsToAdd = subjectsToAdd.Select(s =>
             {
                 s = s.ToLower();
-                var foundSubject = allSubjects.FirstOrDefault(sub => sub.Code == s)
+                var foundSubject = allSubjects.FirstOrDefault(sub => sub.Code.Equals(s, StringComparison.OrdinalIgnoreCase))
                     ?? throw new EntityNotFoundException($"Subject with ID: {s} not found");
                 return foundSubject.Id;
             }).ToList();
@@ -173,7 +173,7 @@ namespace UserManagementService.Src.Services.Implements
             var mappedSubjectsToDelete = subjectsToDelete.Select(s =>
             {
                 s = s.ToLower();
-                var foundSubject = allSubjects.FirstOrDefault(sub => sub.Code == s)
+                var foundSubject = allSubjects.FirstOrDefault(sub => sub.Code.Equals(s, StringComparison.OrdinalIgnoreCase))
                     ?? throw new EntityNotFoundException($"Subject with ID: {s} not found");
                 return foundSubject.Id;
             }).ToList();

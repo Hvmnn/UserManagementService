@@ -22,25 +22,30 @@ namespace UserManagementService.Src.Services.Implements
             _passwordHasher = passwordHasher;
         }
 
-        public async Task RegisterUserAsync(RegisterUserDto registerStudentDto)
+        public async Task RegisterUserAsync(RegisterUserDto registerUserDto)
         {
-            var career = await _careersRepository.GetByIdAsync(registerStudentDto.CareerId);
+            var existingRUT = await _usersRepository.GetUserByRut(registerUserDto.RUT);
+            if (existingRUT != null)
+                throw new ArgumentException("El rut proporcionado ya está registrado.");
+
+            var career = await _careersRepository.GetByIdAsync(registerUserDto.CareerId);
             if (career == null)
                 throw new ArgumentException("La carrera proporcionada no existe.");
 
-            var existingUser = await _usersRepository.GetUserByEmailAsync(registerStudentDto.Email);
+            var existingUser = await _usersRepository.GetUserByEmailAsync(registerUserDto.Email);
             if (existingUser != null)
                 throw new ArgumentException("El correo electrónico ya está registrado.");
 
             var user = new User
             {
-                Name = registerStudentDto.Name,
-                FirstLastName = registerStudentDto.FirstLastName,
-                SecondLastName = registerStudentDto.SecondLastName,
-                RUT = registerStudentDto.RUT,
-                Email = registerStudentDto.Email,
-                CareerId = registerStudentDto.CareerId,
-                HashedPassword = _passwordHasher.HashPassword(null, registerStudentDto.Password),
+                Name = registerUserDto.Name,
+                FirstLastName = registerUserDto.FirstLastName,
+                SecondLastName = registerUserDto.SecondLastName,
+                RUT = registerUserDto.RUT,
+                Email = registerUserDto.Email,
+                CareerId = registerUserDto.CareerId,
+                RoleId = 2,
+                HashedPassword = _passwordHasher.HashPassword(null, registerUserDto.Password),
                 IsEnabled = true
             };
 
