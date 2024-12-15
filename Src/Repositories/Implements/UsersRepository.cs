@@ -13,6 +13,14 @@ namespace UserManagementService.Src.Repositories.Implements
         {
             _context = context;
         }
+
+        public async Task<User> AddUserAsync(User user)
+        {
+            await _context.Users.AddAsync(user);
+            await _context.SaveChangesAsync();
+            return user;
+        }
+        
         public async Task<bool> AddProgressAsync(List<UserProgress> userProgress)
         {
             await _context.UsersProgresses.AddRangeAsync(userProgress);

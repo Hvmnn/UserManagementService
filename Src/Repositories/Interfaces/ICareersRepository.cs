@@ -2,7 +2,7 @@ using UserManagementService.Src.Models;
 
 namespace UserManagementService.Src.Repositories.Interfaces
 {
-    public interface ICareerRepository
+    public interface ICareersRepository
 {
     Task<Career?> GetByIdAsync(int careerId);
 }

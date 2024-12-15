@@ -4,6 +4,7 @@ namespace UserManagementService.Src.Repositories.Interfaces
 {
     public interface IUsersRepository
     {
+        public Task<User> AddUserAsync(User user);
         public Task<List<User>> GetAllAsync();
         public Task<User?> GetUserByIdAsync(int id);
         public Task<User?> GetUserByEmailAsync(string email);

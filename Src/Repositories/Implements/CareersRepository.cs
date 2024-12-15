@@ -5,11 +5,11 @@ using UserManagementService.Src.Repositories.Interfaces;
 
 namespace UserManagementService.Src.Repositories.Implements
 {
-    public class CareerRepository : ICareerRepository
+    public class CareersRepository : ICareersRepository
     {
         private readonly DataContext _context;
 
-        public CareerRepository(DataContext context)
+        public CareersRepository(DataContext context)
         {
             _context = context;
         }
