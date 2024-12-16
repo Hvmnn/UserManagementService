@@ -90,6 +90,13 @@ namespace UserManagementService.Src.Services.Implements
 
         public async Task SetUserProgress(UpdateUserProgressDto subjects)
         {
+
+            if ((subjects.AddSubjects == null || !subjects.AddSubjects.Any()) &&
+                (subjects.DeleteSubjects == null || !subjects.DeleteSubjects.Any()))
+            {
+                return;
+            }
+
             var subjectsId = await MapAndValidateToSubjectId(subjects);
             var subjectsToAdd = subjectsId.Item1;
             var subjectsToDelete = subjectsId.Item2;
@@ -123,8 +130,8 @@ namespace UserManagementService.Src.Services.Implements
                 };
             }).ToList();
 
-            var addResult = await _usersRepository.AddProgressAsync(progressToAdd);
-            var removeResult = await _usersRepository.DeleteProgressAsync(progressToRemove, userId);
+            var addResult = progressToAdd.Any() ? await _usersRepository.AddProgressAsync(progressToAdd) : false;
+            var removeResult = progressToRemove.Any() ? await _usersRepository.DeleteProgressAsync(progressToRemove, userId) : false;
 
             if (!removeResult && !addResult)
                 throw new InternalErrorException("Cannot update user progress");
