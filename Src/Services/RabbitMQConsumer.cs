@@ -6,7 +6,7 @@ using UserManagementService.Src.Helpers;
 
 namespace UserManagementService.Src.Services
 {
-    public class RabbitMQConsumer
+    public class RabbitMQConsumer : BackgroundService
     {
         private readonly RabbitMQOptions _options;
 
@@ -15,9 +15,9 @@ namespace UserManagementService.Src.Services
             _options = options.Value;
         }
 
-        public void Consume(string queueName)
+        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            var factory = new ConnectionFactory
+            var factory = new ConnectionFactory()
             {
                 HostName = _options.Host,
                 Port = _options.Port,
@@ -25,23 +25,34 @@ namespace UserManagementService.Src.Services
                 Password = _options.Password
             };
 
-            using var connection = factory.CreateConnection();
-            using var channel = connection.CreateModel();
+            var connection = factory.CreateConnection();
+            var channel = connection.CreateModel();
 
-            channel.QueueDeclare(queue: queueName, durable: false, exclusive: false, autoDelete: false, arguments: null);
+            channel.ExchangeDeclare(_options.Exchange, ExchangeType.Direct, durable: true);
+            channel.QueueDeclare(_options.QueueName, durable: true, exclusive: false, autoDelete: false);
 
             var consumer = new EventingBasicConsumer(channel);
             consumer.Received += (model, ea) =>
             {
                 var body = ea.Body.ToArray();
                 var message = Encoding.UTF8.GetString(body);
-                Console.WriteLine($"[x] Received {message}");
+                var routingKey = ea.RoutingKey;
+
+                Console.WriteLine($"Message Received: {message} with Routing Key: {routingKey}");
+
+                if (routingKey == _options.RoutingKeyUserCreated)
+                {
+                    Console.WriteLine("Processing user creation event...");
+                }
+                else if (routingKey == _options.RoutingKeyProgressUpdated)
+                {
+                    Console.WriteLine("Processing progress update event...");
+                }
             };
 
-            channel.BasicConsume(queue: queueName, autoAck: true, consumer: consumer);
+            channel.BasicConsume(queue: _options.QueueName, autoAck: true, consumer: consumer);
 
-            Console.WriteLine(" Press [enter] to exit.");
-            Console.ReadLine();
+            await Task.CompletedTask;
         }
     }
 }

@@ -1,7 +1,9 @@
 using System.Security.Claims;
+using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using UserManagementService.Src.DTOs.Auth;
+using UserManagementService.Src.Services;
 using UserManagementService.Src.Services.Interfaces;
 
 namespace UserManagementService.Src.Controllers
@@ -12,11 +14,13 @@ namespace UserManagementService.Src.Controllers
     {
         private readonly IAccessManagementService _accessManagementService;
         private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly IRabbitMQProducer _rabbitMQProducer;
 
-        public AccessController(IAccessManagementService accessManagementService, IHttpContextAccessor httpContextAccessor)
+        public AccessController(IAccessManagementService accessManagementService, IHttpContextAccessor httpContextAccessor, IRabbitMQProducer rabbitMQProducer)
         {
             _accessManagementService = accessManagementService;
             _httpContextAccessor = httpContextAccessor;
+            _rabbitMQProducer = rabbitMQProducer;
         }
 
         [HttpPost("register")]
@@ -26,13 +30,30 @@ namespace UserManagementService.Src.Controllers
             try
             {
                 await _accessManagementService.RegisterUserAsync(registerUserDto);
+
+                var eventMessage = JsonSerializer.Serialize(new
+                {
+                    Event = "UserCreated",
+                    Email = registerUserDto.Email,
+                    RUT = registerUserDto.RUT,
+                    FullName = $"{registerUserDto.Name} {registerUserDto.FirstLastName} {registerUserDto.SecondLastName}",
+                    CareerId = registerUserDto.CareerId
+                });
+
+                _rabbitMQProducer.PublishUserCreated(eventMessage);
+
                 return Ok(new { Message = "Usuario registrado exitosamente." });
             }
             catch (ArgumentException ex)
             {
                 return BadRequest(new { Error = ex.Message });
             }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Error = "Ocurrió un error interno al registrar el usuario.", Details = ex.Message });
+            }
         }
+
 
         [Authorize]
         [HttpPut("update-password")]

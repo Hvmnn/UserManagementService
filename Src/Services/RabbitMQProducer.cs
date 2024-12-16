@@ -6,7 +6,7 @@ using UserManagementService.Src.Helpers;
 
 namespace UserManagementService.Src.Services
 {
-    public class RabbitMQProducer
+    public class RabbitMQProducer : IRabbitMQProducer
     {
         private readonly RabbitMQOptions _options;
 
@@ -15,9 +15,9 @@ namespace UserManagementService.Src.Services
             _options = options.Value;
         }
 
-        public void Publish(string queueName, string message)
+        private void Publish(string routingKey, string message)
         {
-            var factory = new ConnectionFactory
+            var factory = new ConnectionFactory()
             {
                 HostName = _options.Host,
                 Port = _options.Port,
@@ -28,12 +28,26 @@ namespace UserManagementService.Src.Services
             using var connection = factory.CreateConnection();
             using var channel = connection.CreateModel();
 
-            channel.QueueDeclare(queue: queueName, durable: false, exclusive: false, autoDelete: false, arguments: null);
+            channel.ExchangeDeclare(_options.Exchange, ExchangeType.Direct, durable: true);
+            channel.QueueDeclare(_options.QueueName, durable: true, exclusive: false, autoDelete: false);
+            channel.QueueBind(_options.QueueName, _options.Exchange, routingKey);
 
             var body = Encoding.UTF8.GetBytes(message);
-            channel.BasicPublish(exchange: "", routingKey: queueName, basicProperties: null, body: body);
+            channel.BasicPublish(exchange: _options.Exchange,
+                                routingKey: routingKey,
+                                basicProperties: null,
+                                body: body);
+            Console.WriteLine($"Message Sent: {message}");
+        }
 
-            Console.WriteLine($"[x] Sent {message}");
+        public void PublishUserCreated(string message)
+        {
+            Publish(_options.RoutingKeyUserCreated, message);
+        }
+
+        public void PublishProgressUpdated(string message)
+        {
+            Publish(_options.RoutingKeyProgressUpdated, message);
         }
     }
 

@@ -28,7 +28,7 @@ builder.Services.AddScoped<IUsersService, UsersService>();
 builder.Services.AddScoped<ICareersRepository, CareersRepository>();
 builder.Services.AddScoped<IAccessManagementService, AccessManagementService>();
 builder.Services.AddScoped<Microsoft.AspNetCore.Identity.IPasswordHasher<User>, Microsoft.AspNetCore.Identity.PasswordHasher<User>>();
-builder.Services.AddSingleton<RabbitMQProducer>();
+builder.Services.AddSingleton<IRabbitMQProducer, RabbitMQProducer>();
 builder.Services.AddSingleton<RabbitMQConsumer>();
 builder.Services.AddGrpc(options =>
 {
